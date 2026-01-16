@@ -41,7 +41,9 @@ export const moves = {
     card.canAttack = false;
     player.battleZone[slotIdx] = card;
 
-    card.effects?.forEach((eff) => resolveEffect(G, ctx, playerID, eff));
+    card.effects
+      ?.filter((eff) => eff.trigger !== 'ACTIVATE')
+      .forEach((eff) => resolveEffect(G, ctx, playerID, eff));
   },
 
   playSpell: (
@@ -59,7 +61,7 @@ export const moves = {
     player.hand.splice(handIndex, 1);
     player.graveyard.push(card);
     if (card.effects && card.effects.length > 0) {
-      G.pendingEffect = { source: 'SPELL', playerID, card, targetSlot, targetPlayerID };
+      G.pendingEffect = { source: 'SPELL', playerID, card, effects: card.effects, targetSlot, targetPlayerID };
       const opponentID = getOpponentID(playerID);
       events?.setActivePlayers({ value: { [opponentID]: 'response', [playerID]: 'waiting' } });
     }
@@ -84,7 +86,7 @@ export const moves = {
     }
 
     if (card.effects && card.effects.length > 0) {
-      G.pendingEffect = { source: 'SPELL', playerID, card, targetSlot, targetPlayerID };
+      G.pendingEffect = { source: 'SPELL', playerID, card, effects: card.effects, targetSlot, targetPlayerID };
       const opponentID = getOpponentID(playerID);
       events?.setActivePlayers({ value: { [opponentID]: 'response', [playerID]: 'waiting' } });
     }
@@ -116,13 +118,12 @@ export const moves = {
     if (!unit || unit.isTapped) return INVALID_MOVE;
 
     unit.isTapped = true;
-    unit.effects
-      ?.filter((eff) => eff.action === 'ACTIVATE')
-      .forEach(() => {
-        G.pendingEffect = { source: 'UNIT_EFFECT', playerID, card: unit, targetSlot, targetPlayerID };
-        const opponentID = getOpponentID(playerID);
-        events?.setActivePlayers({ value: { [opponentID]: 'response', [playerID]: 'waiting' } });
-      });
+    const activatedEffects = unit.effects?.filter((eff) => eff.trigger === 'ACTIVATE');
+    if (activatedEffects && activatedEffects.length > 0) {
+      G.pendingEffect = { source: 'UNIT_EFFECT', playerID, card: unit, effects: activatedEffects, targetSlot, targetPlayerID };
+      const opponentID = getOpponentID(playerID);
+      events?.setActivePlayers({ value: { [opponentID]: 'response', [playerID]: 'waiting' } });
+    }
   },
 
   passResponse: ({ G, ctx, events, playerID }: MoveContext) => {
@@ -131,7 +132,7 @@ export const moves = {
     if (G.pendingEffect) {
       const pending = G.pendingEffect;
       G.pendingEffect = null;
-      pending.card.effects?.forEach((eff) =>
+      pending.effects.forEach((eff) =>
         resolveEffect(G, ctx, pending.playerID, eff, pending.targetSlot, pending.targetPlayerID)
       );
       events?.setActivePlayers?.({});
