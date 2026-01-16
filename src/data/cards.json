@@ -1,0 +1,140 @@
+[
+  {
+    "id": "u001",
+    "name": "量產型機兵",
+    "type": "UNIT",
+    "cost": 1,
+    "stats": { "atk": 1500 },
+    "keywords": [],
+    "description": "基礎單位。",
+    "image": ""
+  },
+  {
+    "id": "u002",
+    "name": "迅捷斥侯",
+    "type": "UNIT",
+    "cost": 2,
+    "stats": { "atk": 2500 },
+    "keywords": ["RUSH"],
+    "description": "【速攻】",
+    "image": ""
+  },
+  {
+    "id": "u003",
+    "name": "重裝鎮暴盾",
+    "type": "UNIT",
+    "cost": 2,
+    "stats": { "atk": 3000 },
+    "keywords": ["GUARD"],
+    "description": "【守護】",
+    "image": ""
+  },
+  {
+    "id": "u004",
+    "name": "能源增幅器",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 2000 },
+    "keywords": [],
+    "description": "【能源效應】此卡在能源區時，全體 BP +500 (尚未實作光環)。",
+    "image": ""
+  },
+  {
+    "id": "u005",
+    "name": "戰地維修工",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 2500 },
+    "keywords": [],
+    "description": "登場時：回復 1 點生命。",
+    "effects": [{ "action": "HEAL_PLAYER", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "u006",
+    "name": "紅蓮突擊隊長",
+    "type": "UNIT",
+    "cost": 4,
+    "stats": { "atk": 4000 },
+    "keywords": [],
+    "description": "強力單位。",
+    "image": ""
+  },
+  {
+    "id": "u007",
+    "name": "終焉之龍",
+    "type": "UNIT",
+    "cost": 5,
+    "stats": { "atk": 6000 },
+    "keywords": ["RUSH"],
+    "description": "【速攻】。",
+    "image": ""
+  },
+  {
+    "id": "s001",
+    "name": "戰術轟炸",
+    "type": "SPELL",
+    "cost": 3,
+    "description": "對對手造成 1 點直接傷害。",
+    "effects": [{ "action": "DAMAGE_ENEMY", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "s002",
+    "name": "緊急補給",
+    "type": "SPELL_INSTANT",
+    "cost": 1,
+    "description": "【瞬間】抽 1 張牌。可在對手回合使用。",
+    "effects": [{ "action": "DRAW", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "s003",
+    "name": "勇氣戰歌",
+    "type": "SPELL_INSTANT",
+    "cost": 2,
+    "description": "【瞬間】我方所有單位 BP +1000。",
+    "effects": [{ "action": "BUFF_ATK", "value": 1000 }],
+    "image": ""
+  },
+  {
+    "id": "t001",
+    "name": "領域：起點",
+    "type": "TERRITORY",
+    "cost": 0,
+    "description": "【回合 1】開啟新的時代。",
+    "image": ""
+  },
+  {
+    "id": "t002",
+    "name": "領域：戰爭迷霧",
+    "type": "TERRITORY",
+    "cost": 0,
+    "description": "【回合 2】戰爭迷霧籠罩。",
+    "image": ""
+  },
+  {
+    "id": "t003",
+    "name": "領域：魔力湧動",
+    "type": "TERRITORY",
+    "cost": 0,
+    "description": "【回合 3】魔力開始湧動。",
+    "image": ""
+  },
+  {
+    "id": "t004",
+    "name": "領域：焦土作戰",
+    "type": "TERRITORY",
+    "cost": 0,
+    "description": "【回合 4】戰況進入白熱化。",
+    "image": ""
+  },
+  {
+    "id": "t005",
+    "name": "領域：終焉時刻",
+    "type": "TERRITORY",
+    "cost": 0,
+    "description": "【回合 5】決戰時刻。",
+    "image": ""
+  }
+]

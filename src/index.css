@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* 防止手機下拉刷新 */
+body {
+  overscroll-behavior: none;
+  background-color: #1a1a1a;
+  color: white;
+}
