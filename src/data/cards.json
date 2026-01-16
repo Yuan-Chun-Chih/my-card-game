@@ -1,140 +1,448 @@
 [
   {
-    "id": "u001",
-    "name": "量產型機兵",
-    "type": "UNIT",
-    "cost": 1,
-    "stats": { "atk": 1500 },
-    "keywords": [],
-    "description": "基礎單位。",
-    "image": ""
-  },
-  {
-    "id": "u002",
-    "name": "迅捷斥侯",
-    "type": "UNIT",
-    "cost": 2,
-    "stats": { "atk": 2500 },
-    "keywords": ["RUSH"],
-    "description": "【速攻】",
-    "image": ""
-  },
-  {
-    "id": "u003",
-    "name": "重裝鎮暴盾",
+    "id": "sc001",
+    "name": "Radiant Sentry",
     "type": "UNIT",
     "cost": 2,
     "stats": { "atk": 3000 },
     "keywords": ["GUARD"],
-    "description": "【守護】",
+    "description": "Guardian of the sanctum.",
     "image": ""
   },
   {
-    "id": "u004",
-    "name": "能源增幅器",
+    "id": "sc002",
+    "name": "Lightwarden Paladin",
     "type": "UNIT",
-    "cost": 3,
-    "stats": { "atk": 2000 },
-    "keywords": [],
-    "description": "【能源效應】此卡在能源區時，全體 BP +500 (尚未實作光環)。",
-    "image": ""
-  },
-  {
-    "id": "u005",
-    "name": "戰地維修工",
-    "type": "UNIT",
-    "cost": 3,
-    "stats": { "atk": 2500 },
-    "keywords": [],
-    "description": "登場時：回復 1 點生命。",
+    "cost": 4,
+    "stats": { "atk": 5000 },
+    "keywords": ["GUARD"],
+    "description": "On entry, heal 1.",
     "effects": [{ "action": "HEAL_PLAYER", "value": 1 }],
     "image": ""
   },
   {
-    "id": "u006",
-    "name": "紅蓮突擊隊長",
-    "type": "UNIT",
-    "cost": 4,
-    "stats": { "atk": 4000 },
-    "keywords": [],
-    "description": "強力單位。",
-    "image": ""
-  },
-  {
-    "id": "u007",
-    "name": "終焉之龍",
+    "id": "sc003",
+    "name": "Arbiter of Radiance",
     "type": "UNIT",
     "cost": 5,
     "stats": { "atk": 6000 },
-    "keywords": ["RUSH"],
-    "description": "【速攻】。",
+    "keywords": ["GUARD"],
+    "description": "Activate: destroy target unit.",
+    "effects": [{ "action": "DESTROY_UNIT", "trigger": "ACTIVATE" }],
     "image": ""
   },
   {
-    "id": "s001",
-    "name": "戰術轟炸",
-    "type": "SPELL",
-    "cost": 3,
-    "description": "對對手造成 1 點直接傷害。",
-    "effects": [{ "action": "DAMAGE_ENEMY", "value": 1 }],
-    "image": ""
-  },
-  {
-    "id": "s002",
-    "name": "緊急補給",
+    "id": "sc004",
+    "name": "Divine Intervention",
     "type": "SPELL_INSTANT",
+    "cost": 2,
+    "description": "Target ally gets +1000 BP this turn.",
+    "effects": [{ "action": "BUFF_ATK", "value": 1000, "target": "ALLY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "sc005",
+    "name": "Sanctified Barrier",
+    "type": "SPELL",
+    "cost": 2,
+    "description": "Heal 1.",
+    "effects": [{ "action": "HEAL_PLAYER", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "sc006",
+    "name": "Dawn Accord",
+    "type": "SPELL",
     "cost": 1,
-    "description": "【瞬間】抽 1 張牌。可在對手回合使用。",
+    "description": "Draw 1.",
     "effects": [{ "action": "DRAW", "value": 1 }],
     "image": ""
   },
   {
-    "id": "s003",
-    "name": "勇氣戰歌",
+    "id": "sc007",
+    "name": "Aegis Justicar",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 4000 },
+    "keywords": ["GUARD"],
+    "description": "Stalwart defender.",
+    "image": ""
+  },
+  {
+    "id": "sc008",
+    "name": "Seraph of Renewal",
+    "type": "UNIT",
+    "cost": 4,
+    "stats": { "atk": 4500 },
+    "keywords": [],
+    "description": "On entry, heal 1.",
+    "effects": [{ "action": "HEAL_PLAYER", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "sc009",
+    "name": "Oathbound Marshal",
+    "type": "UNIT",
+    "cost": 6,
+    "stats": { "atk": 7000 },
+    "keywords": ["GUARD"],
+    "description": "Commanding bastion.",
+    "image": ""
+  },
+  {
+    "id": "sc010",
+    "name": "Blessed Reprieve",
+    "type": "SPELL_INSTANT",
+    "cost": 1,
+    "description": "Untap target ally unit.",
+    "effects": [{ "action": "UNTAP_UNIT", "target": "ALLY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "ve001",
+    "name": "Grove Initiate",
+    "type": "UNIT",
+    "cost": 1,
+    "stats": { "atk": 2000 },
+    "keywords": [],
+    "description": "Young sapling warrior.",
+    "image": ""
+  },
+  {
+    "id": "ve002",
+    "name": "Wildgrowth Druid",
+    "type": "UNIT",
+    "cost": 2,
+    "stats": { "atk": 2000 },
+    "keywords": [],
+    "description": "Search your deck for a UNIT.",
+    "effects": [{ "action": "SEARCH_DECK", "filter": { "type": "UNIT" }, "shuffle": true }],
+    "image": ""
+  },
+  {
+    "id": "ve003",
+    "name": "Verdant Charger",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 4000 },
+    "keywords": ["RUSH"],
+    "description": "Charges in with wild speed.",
+    "image": ""
+  },
+  {
+    "id": "ve004",
+    "name": "Rampant Stampede",
+    "type": "SPELL",
+    "cost": 2,
+    "description": "Target ally gets +2000 BP this turn.",
+    "effects": [{ "action": "BUFF_ATK", "value": 2000, "target": "ALLY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "ve005",
+    "name": "Rapid Sprout",
+    "type": "SPELL_INSTANT",
+    "cost": 1,
+    "description": "Target ally gets +2000 BP and untaps.",
+    "effects": [
+      { "action": "BUFF_ATK", "value": 2000, "target": "ALLY_UNIT" },
+      { "action": "UNTAP_UNIT", "target": "ALLY_UNIT" }
+    ],
+    "image": ""
+  },
+  {
+    "id": "ve006",
+    "name": "Elder of the Grove",
+    "type": "UNIT",
+    "cost": 7,
+    "stats": { "atk": 8000 },
+    "keywords": ["TRAMPLE"],
+    "description": "Ancient verdant guardian.",
+    "image": ""
+  },
+  {
+    "id": "ve007",
+    "name": "Canopy Guardian",
+    "type": "UNIT",
+    "cost": 4,
+    "stats": { "atk": 5000 },
+    "keywords": ["GUARD"],
+    "description": "Holds the forest line.",
+    "image": ""
+  },
+  {
+    "id": "ve008",
+    "name": "Resonant Beast",
+    "type": "UNIT",
+    "cost": 4,
+    "stats": { "atk": 4500 },
+    "keywords": ["RESONANCE"],
+    "description": "Thrives on spellcasting.",
+    "image": ""
+  },
+  {
+    "id": "ve009",
+    "name": "Overgrowth Colossus",
+    "type": "UNIT",
+    "cost": 6,
+    "stats": { "atk": 7000 },
+    "keywords": ["TRAMPLE"],
+    "description": "A towering force of nature.",
+    "image": ""
+  },
+  {
+    "id": "ve010",
+    "name": "Verdant Renewal",
+    "type": "SPELL",
+    "cost": 3,
+    "description": "Draw 2.",
+    "effects": [{ "action": "DRAW", "value": 2 }],
+    "image": ""
+  },
+  {
+    "id": "ar001",
+    "name": "Aether Cannon",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 3000 },
+    "keywords": [],
+    "description": "Activate: return target unit to hand.",
+    "effects": [{ "action": "BOUNCE_UNIT", "trigger": "ACTIVATE" }],
+    "image": ""
+  },
+  {
+    "id": "ar002",
+    "name": "Chrono Shift",
+    "type": "SPELL_INSTANT",
+    "cost": 3,
+    "description": "Return target unit to its owner's hand.",
+    "effects": [{ "action": "BOUNCE_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "ar003",
+    "name": "Arcane Focus",
+    "type": "SPELL",
+    "cost": 1,
+    "description": "Draw 2.",
+    "effects": [{ "action": "DRAW", "value": 2 }],
+    "image": ""
+  },
+  {
+    "id": "ar004",
+    "name": "Mana Snare",
     "type": "SPELL_INSTANT",
     "cost": 2,
-    "description": "【瞬間】我方所有單位 BP +1000。",
-    "effects": [{ "action": "BUFF_ATK", "value": 1000 }],
+    "description": "Destroy target unit.",
+    "effects": [{ "action": "DESTROY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "ar005",
+    "name": "Gearwright Adept",
+    "type": "UNIT",
+    "cost": 2,
+    "stats": { "atk": 2000 },
+    "keywords": ["RESONANCE"],
+    "description": "Gears hum with arcane charge.",
+    "image": ""
+  },
+  {
+    "id": "ar006",
+    "name": "Pulse Engineer",
+    "type": "UNIT",
+    "cost": 4,
+    "stats": { "atk": 4000 },
+    "keywords": [],
+    "description": "Activate: untap target ally.",
+    "effects": [{ "action": "UNTAP_UNIT", "trigger": "ACTIVATE", "target": "ALLY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "ar007",
+    "name": "Overload Matrix",
+    "type": "SPELL",
+    "cost": 2,
+    "description": "Target ally gets +1000 BP this turn.",
+    "effects": [{ "action": "BUFF_ATK", "value": 1000, "target": "ALLY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "ar008",
+    "name": "Rift Adept",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 3500 },
+    "keywords": [],
+    "description": "On entry, draw 1.",
+    "effects": [{ "action": "DRAW", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "ar009",
+    "name": "Crystal Cycler",
+    "type": "SPELL_INSTANT",
+    "cost": 1,
+    "description": "Draw 1.",
+    "effects": [{ "action": "DRAW", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "ar010",
+    "name": "Aether Lab",
+    "type": "UNIT",
+    "cost": 5,
+    "stats": { "atk": 5000 },
+    "keywords": [],
+    "description": "Search your deck for a SPELL.",
+    "effects": [{ "action": "SEARCH_DECK", "filter": { "type": "SPELL" }, "shuffle": true }],
+    "image": ""
+  },
+  {
+    "id": "nm001",
+    "name": "Soul Reaper",
+    "type": "UNIT",
+    "cost": 4,
+    "stats": { "atk": 5000 },
+    "keywords": ["FEAR"],
+    "description": "Activate: destroy target unit.",
+    "effects": [{ "action": "DESTROY_UNIT", "trigger": "ACTIVATE" }],
+    "image": ""
+  },
+  {
+    "id": "nm002",
+    "name": "Grave Stirrer",
+    "type": "UNIT",
+    "cost": 2,
+    "stats": { "atk": 2000 },
+    "keywords": [],
+    "description": "On entry, draw 1.",
+    "effects": [{ "action": "DRAW", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "nm003",
+    "name": "Abyss Whisperer",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 3000 },
+    "keywords": ["FEAR"],
+    "description": "An unsettling presence.",
+    "image": ""
+  },
+  {
+    "id": "nm004",
+    "name": "Nightmare Coil",
+    "type": "SPELL",
+    "cost": 2,
+    "description": "Return target unit to its owner's hand.",
+    "effects": [{ "action": "BOUNCE_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "nm005",
+    "name": "Dread Lash",
+    "type": "SPELL_INSTANT",
+    "cost": 1,
+    "description": "Target unit gets -1000 BP this turn.",
+    "effects": [{ "action": "BUFF_ATK", "value": -1000, "target": "ENEMY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "nm006",
+    "name": "Crypt Dominator",
+    "type": "UNIT",
+    "cost": 6,
+    "stats": { "atk": 7000 },
+    "keywords": ["FEAR"],
+    "description": "Rules the grave shadows.",
+    "image": ""
+  },
+  {
+    "id": "nm007",
+    "name": "Harvester Shade",
+    "type": "UNIT",
+    "cost": 3,
+    "stats": { "atk": 3500 },
+    "keywords": [],
+    "description": "On entry, deal 1 damage to the enemy.",
+    "effects": [{ "action": "DAMAGE_ENEMY", "value": 1 }],
+    "image": ""
+  },
+  {
+    "id": "nm008",
+    "name": "Call of the Abyss",
+    "type": "SPELL",
+    "cost": 4,
+    "description": "Destroy target unit.",
+    "effects": [{ "action": "DESTROY_UNIT" }],
+    "image": ""
+  },
+  {
+    "id": "nm009",
+    "name": "Soul Pact",
+    "type": "SPELL",
+    "cost": 2,
+    "description": "Draw 2.",
+    "effects": [{ "action": "DRAW", "value": 2 }],
+    "image": ""
+  },
+  {
+    "id": "nm010",
+    "name": "Bone Tyrant",
+    "type": "UNIT",
+    "cost": 7,
+    "stats": { "atk": 8000 },
+    "keywords": ["FEAR"],
+    "description": "A terror made manifest.",
     "image": ""
   },
   {
     "id": "t001",
-    "name": "領域：起點",
+    "name": "領域：前線突擊",
     "type": "TERRITORY",
     "cost": 0,
-    "description": "【回合 1】開啟新的時代。",
+    "description": "【回合開始】進攻的號角響起。持續效果：我方所有單位本回合獲得 +1000 BP。",
     "image": ""
   },
   {
     "id": "t002",
-    "name": "領域：戰爭迷霧",
+    "name": "領域：後勤補給",
     "type": "TERRITORY",
     "cost": 0,
-    "description": "【回合 2】戰爭迷霧籠罩。",
+    "description": "【回合開始】獲得額外資源。翻開時：抽 1 張牌。",
     "image": ""
   },
   {
     "id": "t003",
-    "name": "領域：魔力湧動",
+    "name": "領域：魔導增幅",
     "type": "TERRITORY",
     "cost": 0,
-    "description": "【回合 3】魔力開始湧動。",
+    "description": "【回合開始】空氣中充滿魔力。持續效果：我方法術消耗減少 1 點。",
     "image": ""
   },
   {
     "id": "t004",
-    "name": "領域：焦土作戰",
+    "name": "領域：精準轟炸",
     "type": "TERRITORY",
     "cost": 0,
-    "description": "【回合 4】戰況進入白熱化。",
+    "description": "【回合開始】軌道砲支援。翻開時：對敵方隨機一個單位造成 2000 點傷害。",
     "image": ""
   },
   {
     "id": "t005",
-    "name": "領域：終焉時刻",
+    "name": "領域：緊急維修",
     "type": "TERRITORY",
     "cost": 0,
-    "description": "【回合 5】決戰時刻。",
+    "description": "【回合開始】戰地搶修。翻開時：隨機將棄牌區一張單位卡移回手牌。",
+    "image": ""
+  },
+  {
+    "id": "t006",
+    "name": "領域：干擾力場",
+    "type": "TERRITORY",
+    "cost": 0,
+    "description": "【回合開始】通訊干擾。持續效果：敵方無法在你的回合發動【瞬間】法術。",
     "image": ""
   }
 ]

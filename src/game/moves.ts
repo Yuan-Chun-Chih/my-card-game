@@ -5,6 +5,23 @@ import { resolveEffect, takeDamage } from './logic';
 const getOpponentID = (playerID: PlayerID): PlayerID => (playerID === '0' ? '1' : '0');
 
 export const moves = {
+  returnEnergy: ({ G, ctx, playerID }: MoveContext, energyIndex: number) => {
+    if (ctx.activePlayers?.[playerID] !== 'deployment') return INVALID_MOVE;
+    const player = G.players[playerID];
+    if (energyIndex < 0 || energyIndex >= player.energyZone.length) return INVALID_MOVE;
+
+    const card = player.energyZone[energyIndex];
+    player.energyZone.splice(energyIndex, 1);
+    card.isTapped = false;
+    card.isFaceDown = false;
+    player.hand.push(card);
+  },
+
+  endDeployment: ({ ctx, events, playerID }: MoveContext) => {
+    if (ctx.activePlayers?.[playerID] !== 'deployment') return INVALID_MOVE;
+    events?.endStage();
+  },
+
   drawCard: ({ G, playerID }: MoveContext) => {
     const player = G.players[playerID];
     const card = player.deck.pop();
@@ -55,7 +72,12 @@ export const moves = {
     const player = G.players[playerID];
     const card = player.hand[handIndex];
     if (!card || (card.type !== 'SPELL' && card.type !== 'SPELL_INSTANT')) return INVALID_MOVE;
-    if (player.energyZone.length < card.cost) return INVALID_MOVE;
+    const costModifier =
+      G.activeTerritory?.id === 't003' && G.activeTerritory.ownerID === playerID && ctx.currentPlayer === playerID
+        ? 1
+        : 0;
+    const effectiveCost = Math.max(0, card.cost - costModifier);
+    if (player.energyZone.length < effectiveCost) return INVALID_MOVE;
     if (card.type === 'SPELL' && ctx.phase !== 'main') return INVALID_MOVE;
 
     player.hand.splice(handIndex, 1);
@@ -76,7 +98,19 @@ export const moves = {
     const player = G.players[playerID];
     const card = player.hand[handIndex];
     if (!card || card.type !== 'SPELL_INSTANT') return INVALID_MOVE;
-    if (player.energyZone.length < card.cost) return INVALID_MOVE;
+    if (
+      G.activeTerritory?.id === 't006' &&
+      G.activeTerritory.ownerID === ctx.currentPlayer &&
+      playerID !== ctx.currentPlayer
+    ) {
+      return INVALID_MOVE;
+    }
+    const costModifier =
+      G.activeTerritory?.id === 't003' && G.activeTerritory.ownerID === playerID && ctx.currentPlayer === playerID
+        ? 1
+        : 0;
+    const effectiveCost = Math.max(0, card.cost - costModifier);
+    if (player.energyZone.length < effectiveCost) return INVALID_MOVE;
 
     player.hand.splice(handIndex, 1);
     player.graveyard.push(card);
@@ -186,7 +220,9 @@ export const moves = {
     if (!attacker || !blocker || blocker.isTapped) return INVALID_MOVE;
 
     blocker.isTapped = true;
-    const atkBP = attacker.currentBP ?? attacker.bp ?? 0;
+    const territoryBonus =
+      G.activeTerritory?.id === 't001' && G.activeTerritory.ownerID === combat.attackerPlayerID ? 1000 : 0;
+    const atkBP = (attacker.currentBP ?? attacker.bp ?? 0) + territoryBonus;
     const blkBP = blocker.currentBP ?? blocker.bp ?? 0;
 
     if (atkBP >= blkBP) {

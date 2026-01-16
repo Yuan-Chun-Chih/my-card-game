@@ -111,8 +111,8 @@ export interface PendingAttack {
 
 export interface GameState {
   players: Record<PlayerID, PlayerState>;
-  sharedDeck: CardInstance[];
-  sharedRevealed: CardInstance[];
+  territoryDecks: Record<PlayerID, CardInstance[]>;
+  activeTerritory: CardInstance | null;
   turnCount: number;
   era: number;
   combatState: CombatState | null;
