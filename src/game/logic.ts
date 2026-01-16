@@ -6,6 +6,14 @@ type RawEffect = {
   value?: number;
   amount?: number;
   target?: string;
+  trigger?: string;
+  filter?: {
+    type?: string;
+    id?: string;
+    nameIncludes?: string;
+    keyword?: string;
+  };
+  shuffle?: boolean;
 };
 
 type RawCard = {
@@ -25,14 +33,22 @@ const toEffectDef = (raw: RawEffect): EffectDef => {
   const amount = raw.amount ?? raw.value;
   switch (raw.action) {
     case 'DAMAGE_ENEMY':
-      return { action: 'DAMAGE_PLAYER', amount, target: 'OPPONENT' };
+      return { action: 'DAMAGE_PLAYER', amount, target: 'OPPONENT', trigger: raw.trigger as EffectDef['trigger'] };
     case 'BUFF_ATK':
-      return { action: 'BUFF_UNIT_BP', amount, target: raw.target as EffectDef['target'] };
+      return {
+        action: 'BUFF_UNIT_BP',
+        amount,
+        target: raw.target as EffectDef['target'],
+        trigger: raw.trigger as EffectDef['trigger']
+      };
     default:
       return {
         action: raw.action as EffectDef['action'],
         amount,
-        target: raw.target as EffectDef['target']
+        target: raw.target as EffectDef['target'],
+        trigger: raw.trigger as EffectDef['trigger'],
+        filter: raw.filter as EffectDef['filter'],
+        shuffle: raw.shuffle
       };
   }
 };
@@ -138,6 +154,22 @@ export const resolveEffect = (
       }
       break;
     }
+    case 'BOUNCE_UNIT': {
+      if (typeof targetSlot === 'number') {
+        const targetOwner =
+          targetPlayerID ??
+          (effect.target === 'ALLY_UNIT' ? playerID : effect.target === 'ENEMY_UNIT' ? opponentID : opponentID);
+        const targetSide = G.players[targetOwner];
+        const targetUnit = targetSide.battleZone[targetSlot];
+        if (targetUnit) {
+          targetSide.battleZone[targetSlot] = null;
+          targetUnit.isTapped = false;
+          targetUnit.canAttack = false;
+          targetSide.hand.push(targetUnit);
+        }
+      }
+      break;
+    }
     case 'BUFF_ATK':
     case 'BUFF_UNIT_BP': {
       if (typeof targetSlot === 'number') {
@@ -162,6 +194,28 @@ export const resolveEffect = (
         const targetSide = G.players[targetOwner];
         const unit = targetSide.battleZone[targetSlot];
         if (unit) unit.isTapped = false;
+      }
+      break;
+    }
+    case 'SEARCH_DECK': {
+      const filter = effect.filter;
+      if (!filter) break;
+      const index = player.deck.findIndex((card) => {
+        if (filter.id && card.id !== filter.id) return false;
+        if (filter.type && card.type !== filter.type) return false;
+        if (filter.keyword && !(card.keywords ?? []).includes(filter.keyword)) return false;
+        if (filter.nameIncludes && !card.name.toLowerCase().includes(filter.nameIncludes.toLowerCase())) return false;
+        return true;
+      });
+      if (index >= 0) {
+        const [card] = player.deck.splice(index, 1);
+        if (card) {
+          card.isFaceDown = false;
+          player.hand.push(card);
+        }
+      }
+      if (effect.shuffle) {
+        player.deck = shuffle(player.deck);
       }
       break;
     }

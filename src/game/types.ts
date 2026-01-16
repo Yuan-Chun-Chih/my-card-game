@@ -11,7 +11,18 @@ export type EffectAction =
   | 'UNTAP_UNIT'
   | 'DAMAGE_ENEMY'
   | 'BUFF_ATK'
-  | 'ACTIVATE';
+  | 'ACTIVATE'
+  | 'SEARCH_DECK'
+  | 'BOUNCE_UNIT';
+
+export type EffectTrigger = 'ENTER' | 'ACTIVATE';
+
+export interface EffectFilter {
+  type?: CardType;
+  id?: string;
+  nameIncludes?: string;
+  keyword?: string;
+}
 
 export type EffectTarget =
   | 'NONE'
@@ -26,6 +37,9 @@ export interface EffectDef {
   amount?: number;
   value?: number;
   target?: EffectTarget;
+  trigger?: EffectTrigger;
+  filter?: EffectFilter;
+  shuffle?: boolean;
 }
 
 export interface CardDef {
@@ -85,6 +99,7 @@ export interface PendingEffect {
   source: 'SPELL' | 'UNIT_EFFECT';
   playerID: PlayerID;
   card: CardInstance;
+  effects: EffectDef[];
   targetSlot?: number;
   targetPlayerID?: PlayerID;
 }

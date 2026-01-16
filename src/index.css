@@ -1,8 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Space+Grotesk:wght@400;600&display=swap');
 @import "tailwindcss";
 
-/* 防止手機下拉刷新 */
+:root {
+  --aether-bg: #0b0b10;
+  --aether-deep: #121421;
+  --aether-gold: #d6b25e;
+  --aether-ember: #f97316;
+  --aether-arcane: #38bdf8;
+  --aether-mist: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
   overscroll-behavior: none;
-  background-color: #1a1a1a;
+  background: radial-gradient(circle at 20% 20%, #1a1b2a 0%, var(--aether-bg) 55%, #050509 100%);
   color: white;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+.aether-title {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+  text-shadow: 0 8px 40px rgba(214, 178, 94, 0.4);
+}
+
+.aether-bg {
+  background: radial-gradient(circle at 20% 20%, #171a2c 0%, #0b0b10 40%, #050509 100%);
+}
+
+.aether-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 1) 70%);
+  opacity: 0.35;
+}
+
+.aether-orb {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  opacity: 0.5;
+  background: radial-gradient(circle, rgba(214, 178, 94, 0.45) 0%, rgba(214, 178, 94, 0.08) 55%, transparent 70%);
+  animation: drift 14s ease-in-out infinite;
+}
+
+.orb-left {
+  top: -120px;
+  left: -80px;
+}
+
+.orb-right {
+  bottom: -140px;
+  right: -100px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.45) 0%, rgba(56, 189, 248, 0.08) 55%, transparent 70%);
+  animation-delay: -4s;
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.8s ease forwards;
+}
+
+.animate-stagger > * {
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards;
+}
+
+.animate-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+.animate-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+.animate-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+.animate-stagger > *:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, 20px) scale(1.05);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
