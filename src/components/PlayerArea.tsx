@@ -11,6 +11,9 @@ interface PlayerAreaProps {
   onHandClick?: (index: number) => void;
   onFieldClick: (index: number) => void;
   isBlockingPhase?: boolean;
+  isDeploymentPhase?: boolean;
+  isEnergyTargeting?: boolean;
+  onEnergyClick?: (index: number) => void;
   targetingSource?: unknown;
 }
 
@@ -20,7 +23,10 @@ export const PlayerArea: React.FC<PlayerAreaProps> = ({
   selectedHandIndex,
   onHandClick,
   onFieldClick,
-  isBlockingPhase
+  isBlockingPhase,
+  isDeploymentPhase,
+  isEnergyTargeting,
+  onEnergyClick
 }) => {
   return (
     <div className={clsx('flex w-full h-[40vh] p-2 relative', isOpponent ? 'bg-red-900/10 items-start' : 'bg-blue-900/10 items-end')}>
@@ -51,7 +57,25 @@ export const PlayerArea: React.FC<PlayerAreaProps> = ({
         <div className={clsx('flex gap-2 justify-center items-center absolute w-full opacity-90 z-20', isOpponent ? 'top-20' : 'bottom-32')}>
           <span className="text-[10px] text-gray-400 font-bold w-8 text-right">ENG</span>
           {player.energyZone.map((card, idx) => (
-            <Card key={card.instanceId ?? idx} card={card} variant="ENERGY" />
+            <div
+              key={card.instanceId ?? idx}
+              className={clsx(
+                'relative transition-all duration-200',
+                !isOpponent &&
+                  (isDeploymentPhase || isEnergyTargeting) &&
+                  'cursor-pointer hover:-translate-y-2 hover:ring-2 hover:ring-amber-300'
+              )}
+              onClick={() => {
+                if (!isOpponent && (isDeploymentPhase || isEnergyTargeting)) onEnergyClick?.(idx);
+              }}
+            >
+              <Card card={card} variant="ENERGY" />
+              {!isOpponent && (isDeploymentPhase || isEnergyTargeting) && (
+                <div className="absolute -top-2 -right-2 bg-amber-500 text-black rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">
+                  R
+                </div>
+              )}
+            </div>
           ))}
         </div>
 

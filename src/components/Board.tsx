@@ -9,6 +9,8 @@ import { PlayerArea } from './PlayerArea';
 type TargetingSource =
   | { type: 'HAND_SPELL'; index: number; card: CardInstance }
   | { type: 'UNIT_EFFECT'; slot: number; card: CardInstance }
+  | { type: 'UNIT_EFFECT_ENERGY'; slot: number; card: CardInstance }
+  | { type: 'FLASH_SUMMON'; index: number; card: CardInstance }
   | null;
 
 interface MyBoardProps extends BoardProps<GameState> {}
@@ -28,7 +30,8 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
   const phaseLabel = isMyTurn ? currentPhase : `opponent ${currentPhase}`;
   const isBlockingPhase = typeof playerID === 'string' && ctx.activePlayers?.[playerID] === 'blocking';
   const isResponsePhase = typeof playerID === 'string' && ctx.activePlayers?.[playerID] === 'response';
-  const isMainPhase = isMyTurn && !isBlockingPhase && !isResponsePhase && currentPhase === 'main';
+  const isDeploymentPhase = typeof playerID === 'string' && ctx.activePlayers?.[playerID] === 'deployment';
+  const isMainPhase = isMyTurn && !isBlockingPhase && !isResponsePhase && !isDeploymentPhase && currentPhase === 'main';
 
   const selectedCard = selectedHandIndex !== null ? me.hand[selectedHandIndex] : null;
 
@@ -40,6 +43,15 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
 
   const handleFieldClick = (isOpponent: boolean, slotIndex: number) => {
     if (targetingSource) {
+      if (targetingSource.type === 'FLASH_SUMMON') {
+        if (isOpponent) return;
+        moves.playUnitInstantWithSacrifice(targetingSource.index, slotIndex);
+        setTargetingSource(null);
+        return;
+      }
+      if (targetingSource.type === 'UNIT_EFFECT_ENERGY') {
+        return;
+      }
       const targetPlayerID = isOpponent ? opID : viewID;
       if (targetingSource.type === 'HAND_SPELL') {
         if (targetingSource.card.type === 'SPELL') {
@@ -55,6 +67,7 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
     }
 
     if (isOpponent) return;
+    if (isDeploymentPhase) return;
 
     if (isBlockingPhase) {
       moves.block(slotIndex);
@@ -80,14 +93,20 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
     );
   }
 
-  const sharedSlots = [...G.sharedRevealed, ...G.sharedDeck].slice(0, 5);
+  const remainingTerritories = {
+    p0: G.territoryDecks?.['0']?.length ?? 0,
+    p1: G.territoryDecks?.['1']?.length ?? 0
+  };
+  const nextTerritory = G.territoryDecks?.[ctx.currentPlayer]?.[0] ?? null;
 
   return (
     <div className="relative flex flex-col w-full h-screen bg-[#121212] overflow-hidden text-white select-none font-sans">
       {targetingSource && (
         <div className="absolute inset-0 z-40 cursor-crosshair flex flex-col items-center justify-center pointer-events-none">
           <div className="bg-black/70 px-6 py-4 rounded-xl border border-yellow-500 animate-pulse pointer-events-auto">
-            <h2 className="text-xl font-bold text-yellow-500 mb-1">Select a target</h2>
+            <h2 className="text-xl font-bold text-yellow-500 mb-1">
+              {targetingSource.type === 'UNIT_EFFECT_ENERGY' ? 'Select an energy unit' : 'Select a target'}
+            </h2>
             <button onClick={() => setTargetingSource(null)} className="px-4 py-1 bg-gray-700 rounded text-xs text-white">
               Cancel
             </button>
@@ -96,6 +115,20 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
       )}
 
       {isBlockingPhase && <BlockingWarning onSkip={() => moves.skipBlock()} />}
+      {isDeploymentPhase && (
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 pointer-events-none flex justify-center">
+          <div className="bg-black/80 p-4 rounded-xl border border-amber-400/50 text-center shadow-[0_0_20px_rgba(251,191,36,0.3)] pointer-events-auto">
+            <h3 className="text-amber-100 text-lg mb-2 font-bold tracking-widest">DEPLOYMENT PHASE</h3>
+            <p className="text-white/60 text-xs mb-4">Click energy cards to return them to hand.</p>
+            <button
+              onClick={() => moves.endDeployment()}
+              className="bg-amber-500 hover:bg-amber-400 text-black font-bold py-2 px-6 rounded-full uppercase tracking-widest transition-all"
+            >
+              Start Main Phase
+            </button>
+          </div>
+        </div>
+      )}
       {isResponsePhase && (
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 pointer-events-none flex justify-center">
           <div className="bg-indigo-900/80 border border-indigo-400 p-4 rounded text-center pointer-events-auto shadow-2xl animate-pulse">
@@ -111,7 +144,7 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
         </div>
       )}
 
-      {selectedHandIndex !== null && selectedCard && !targetingSource && (
+      {selectedHandIndex !== null && selectedCard && !targetingSource && !isDeploymentPhase && (
         <HandActionModal
           card={selectedCard}
           phase={currentPhase}
@@ -123,6 +156,13 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
             selectedCard.type === 'UNIT' &&
             me.energyZone.length >= selectedCard.cost &&
             me.battleZone.some((s) => s === null)
+          }
+          canFlash={
+            !isMyTurn &&
+            selectedCard.type === 'UNIT' &&
+            (selectedCard.keywords ?? []).includes('FLASH') &&
+            me.energyZone.length >= selectedCard.cost &&
+            me.battleZone.some((s) => s !== null)
           }
           canCastSpell={isMainPhase && selectedCard.type === 'SPELL' && me.energyZone.length >= selectedCard.cost}
           canCastInstant={
@@ -138,6 +178,9 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
             moves.playUnit(selectedHandIndex);
             setSelectedHandIndex(null);
           }}
+          onPlayFlash={() => {
+            startTargeting({ type: 'FLASH_SUMMON', index: selectedHandIndex, card: selectedCard });
+          }}
           onPlaySpell={() => {
             moves.playSpell(selectedHandIndex);
             setSelectedHandIndex(null);
@@ -151,7 +194,7 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
         />
       )}
 
-      {selectedFieldSlot !== null && me.battleZone[selectedFieldSlot] && !targetingSource && (
+      {selectedFieldSlot !== null && me.battleZone[selectedFieldSlot] && !targetingSource && !isDeploymentPhase && (
         <UnitActionModal
           unit={me.battleZone[selectedFieldSlot]}
           phase={currentPhase}
@@ -160,7 +203,13 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
             setSelectedFieldSlot(null);
           }}
           onEffect={() => {
-            startTargeting({ type: 'UNIT_EFFECT', slot: selectedFieldSlot, card: me.battleZone[selectedFieldSlot]! });
+            const unit = me.battleZone[selectedFieldSlot]!;
+            const hasEnergySummon = unit.effects?.some((eff) => eff.action === 'SUMMON_FROM_ENERGY');
+            startTargeting({
+              type: hasEnergySummon ? 'UNIT_EFFECT_ENERGY' : 'UNIT_EFFECT',
+              slot: selectedFieldSlot,
+              card: unit
+            });
           }}
           onCancel={() => setSelectedFieldSlot(null)}
         />
@@ -180,7 +229,11 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
         </div>
 
         <div className="flex-1 flex justify-center">
-          <SharedTerritoryZone cards={sharedSlots} />
+          <SharedTerritoryZone
+            activeTerritory={G.activeTerritory}
+            nextTerritory={nextTerritory}
+            remaining={remainingTerritories}
+          />
         </div>
 
         <div className="w-48 flex flex-col gap-2 items-end z-20">
@@ -209,9 +262,19 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
         player={me}
         isOpponent={false}
         selectedHandIndex={selectedHandIndex}
-        onHandClick={(idx: number) => !isBlockingPhase && setSelectedHandIndex(idx)}
+        onHandClick={(idx: number) => !isBlockingPhase && !isDeploymentPhase && setSelectedHandIndex(idx)}
         onFieldClick={(idx: number) => handleFieldClick(false, idx)}
         isBlockingPhase={isBlockingPhase}
+        isDeploymentPhase={isDeploymentPhase}
+        isEnergyTargeting={targetingSource?.type === 'UNIT_EFFECT_ENERGY'}
+        onEnergyClick={(idx: number) => {
+          if (targetingSource?.type === 'UNIT_EFFECT_ENERGY') {
+            moves.useUnitEffect(targetingSource.slot, idx, viewID);
+            setTargetingSource(null);
+            return;
+          }
+          moves.returnEnergy(idx);
+        }}
         targetingSource={targetingSource}
       />
     </div>

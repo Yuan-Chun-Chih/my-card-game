@@ -5,6 +5,55 @@ import { resolveEffect, takeDamage } from './logic';
 const getOpponentID = (playerID: PlayerID): PlayerID => (playerID === '0' ? '1' : '0');
 
 export const moves = {
+  playUnitInstantWithSacrifice: (
+    { G, ctx, playerID }: MoveContext,
+    handIndex: number,
+    sacrificeSlotIndex: number
+  ) => {
+    if (ctx.currentPlayer === playerID) return INVALID_MOVE;
+    const player = G.players[playerID];
+    const card = player.hand[handIndex];
+    if (!card || card.type !== 'UNIT') return INVALID_MOVE;
+    if (!(card.keywords ?? []).includes('FLASH')) return INVALID_MOVE;
+    if (player.energyZone.length < card.cost) return INVALID_MOVE;
+
+    const sacrifice = player.battleZone[sacrificeSlotIndex];
+    if (!sacrifice) return INVALID_MOVE;
+
+    const slotIdx = player.battleZone.findIndex((s, idx) => s === null || idx === sacrificeSlotIndex);
+    if (slotIdx === -1) return INVALID_MOVE;
+
+    player.battleZone[sacrificeSlotIndex] = null;
+    player.graveyard.push(sacrifice);
+
+    player.hand.splice(handIndex, 1);
+    card.isTapped = false;
+    card.canAttack = true;
+    if (!card.keywords) card.keywords = [];
+    if (!card.keywords.includes('RUSH')) card.keywords.push('RUSH');
+    player.battleZone[slotIdx] = card;
+
+    card.effects
+      ?.filter((eff) => eff.trigger !== 'ACTIVATE')
+      .forEach((eff) => resolveEffect(G, ctx, playerID, eff));
+  },
+  returnEnergy: ({ G, ctx, playerID }: MoveContext, energyIndex: number) => {
+    if (ctx.activePlayers?.[playerID] !== 'deployment') return INVALID_MOVE;
+    const player = G.players[playerID];
+    if (energyIndex < 0 || energyIndex >= player.energyZone.length) return INVALID_MOVE;
+
+    const card = player.energyZone[energyIndex];
+    player.energyZone.splice(energyIndex, 1);
+    card.isTapped = false;
+    card.isFaceDown = false;
+    player.hand.push(card);
+  },
+
+  endDeployment: ({ ctx, events, playerID }: MoveContext) => {
+    if (ctx.activePlayers?.[playerID] !== 'deployment') return INVALID_MOVE;
+    events?.endStage();
+  },
+
   drawCard: ({ G, playerID }: MoveContext) => {
     const player = G.players[playerID];
     const card = player.deck.pop();
@@ -37,8 +86,9 @@ export const moves = {
     if (slotIdx === -1) return INVALID_MOVE;
 
     player.hand.splice(handIndex, 1);
-    card.isTapped = true;
-    card.canAttack = false;
+    const hasRush = (card.keywords ?? []).includes('RUSH');
+    card.isTapped = false;
+    card.canAttack = hasRush;
     player.battleZone[slotIdx] = card;
 
     card.effects
@@ -55,13 +105,27 @@ export const moves = {
     const player = G.players[playerID];
     const card = player.hand[handIndex];
     if (!card || (card.type !== 'SPELL' && card.type !== 'SPELL_INSTANT')) return INVALID_MOVE;
-    if (player.energyZone.length < card.cost) return INVALID_MOVE;
+    const costModifier =
+      G.activeTerritory?.id === 't003' && G.activeTerritory.ownerID === playerID && ctx.currentPlayer === playerID
+        ? 1
+        : 0;
+    const effectiveCost = Math.max(0, card.cost - costModifier);
+    if (player.energyZone.length < effectiveCost) return INVALID_MOVE;
     if (card.type === 'SPELL' && ctx.phase !== 'main') return INVALID_MOVE;
 
     player.hand.splice(handIndex, 1);
     player.graveyard.push(card);
+    if (card.effects?.some((eff) => eff.action === 'NEGATE_EFFECT')) {
+      if (G.pendingEffect) {
+        G.pendingEffect = null;
+        events?.setActivePlayers?.({});
+      }
+      return;
+    }
     if (card.effects && card.effects.length > 0) {
-      G.pendingEffect = { source: 'SPELL', playerID, card, effects: card.effects, targetSlot, targetPlayerID };
+      const pending = { source: 'SPELL', playerID, card, effects: card.effects, targetSlot, targetPlayerID };
+      G.pendingEffect = pending;
+      G.lastPendingEffect = pending;
       const opponentID = getOpponentID(playerID);
       events?.setActivePlayers({ value: { [opponentID]: 'response', [playerID]: 'waiting' } });
     }
@@ -76,17 +140,38 @@ export const moves = {
     const player = G.players[playerID];
     const card = player.hand[handIndex];
     if (!card || card.type !== 'SPELL_INSTANT') return INVALID_MOVE;
-    if (player.energyZone.length < card.cost) return INVALID_MOVE;
+    if (
+      G.activeTerritory?.id === 't006' &&
+      G.activeTerritory.ownerID === ctx.currentPlayer &&
+      playerID !== ctx.currentPlayer
+    ) {
+      return INVALID_MOVE;
+    }
+    const costModifier =
+      G.activeTerritory?.id === 't003' && G.activeTerritory.ownerID === playerID && ctx.currentPlayer === playerID
+        ? 1
+        : 0;
+    const effectiveCost = Math.max(0, card.cost - costModifier);
+    if (player.energyZone.length < effectiveCost) return INVALID_MOVE;
 
     player.hand.splice(handIndex, 1);
     player.graveyard.push(card);
+    if (card.effects?.some((eff) => eff.action === 'NEGATE_EFFECT')) {
+      if (G.pendingEffect) {
+        G.pendingEffect = null;
+        events?.setActivePlayers?.({});
+      }
+      return;
+    }
     if (G.pendingEffect || G.pendingAttack) {
       card.effects?.forEach((eff) => resolveEffect(G, ctx, playerID, eff, targetSlot, targetPlayerID));
       return;
     }
 
     if (card.effects && card.effects.length > 0) {
-      G.pendingEffect = { source: 'SPELL', playerID, card, effects: card.effects, targetSlot, targetPlayerID };
+      const pending = { source: 'SPELL', playerID, card, effects: card.effects, targetSlot, targetPlayerID };
+      G.pendingEffect = pending;
+      G.lastPendingEffect = pending;
       const opponentID = getOpponentID(playerID);
       events?.setActivePlayers({ value: { [opponentID]: 'response', [playerID]: 'waiting' } });
     }
@@ -116,11 +201,14 @@ export const moves = {
     const player = G.players[playerID];
     const unit = player.battleZone[slotIndex];
     if (!unit || unit.isTapped) return INVALID_MOVE;
+    if (unit.silencedTurn === ctx.turn) return INVALID_MOVE;
 
     unit.isTapped = true;
     const activatedEffects = unit.effects?.filter((eff) => eff.trigger === 'ACTIVATE');
     if (activatedEffects && activatedEffects.length > 0) {
-      G.pendingEffect = { source: 'UNIT_EFFECT', playerID, card: unit, effects: activatedEffects, targetSlot, targetPlayerID };
+      const pending = { source: 'UNIT_EFFECT', playerID, card: unit, effects: activatedEffects, targetSlot, targetPlayerID };
+      G.pendingEffect = pending;
+      G.lastPendingEffect = pending;
       const opponentID = getOpponentID(playerID);
       events?.setActivePlayers({ value: { [opponentID]: 'response', [playerID]: 'waiting' } });
     }
@@ -186,7 +274,9 @@ export const moves = {
     if (!attacker || !blocker || blocker.isTapped) return INVALID_MOVE;
 
     blocker.isTapped = true;
-    const atkBP = attacker.currentBP ?? attacker.bp ?? 0;
+    const territoryBonus =
+      G.activeTerritory?.id === 't001' && G.activeTerritory.ownerID === combat.attackerPlayerID ? 1000 : 0;
+    const atkBP = (attacker.currentBP ?? attacker.bp ?? 0) + territoryBonus;
     const blkBP = blocker.currentBP ?? blocker.bp ?? 0;
 
     if (atkBP >= blkBP) {

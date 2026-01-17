@@ -34,9 +34,39 @@ interface Deck {
   id: string;
   name: string;
   cards: Record<string, number>;
+  territories: string[];
 }
 
+const MAX_DECK_SIZE = 40;
+const MAX_COPIES = 4;
 const STORAGE_KEY = 'aether-nexus-decks';
+
+const createDeck = (id: string, name: string, cardIds: string[]): Deck => {
+  const cards: Record<string, number> = {};
+  cardIds.forEach((cardId) => {
+    cards[cardId] = MAX_COPIES;
+  });
+  return { id, name, cards, territories: ['t001', 't002', 't003'] };
+};
+
+const TEMPLATE_DECKS: Deck[] = [
+  createDeck('deck-sanctum', 'Sanctum Rampart', [
+    'sc001', 'sc002', 'sc003', 'sc004', 'sc005',
+    'sc006', 'sc007', 'sc008', 'sc009', 'sc010'
+  ]),
+  createDeck('deck-verdant', 'Verdant Wilds', [
+    've001', 've002', 've003', 've004', 've005',
+    've006', 've007', 've008', 've009', 've010'
+  ]),
+  createDeck('deck-arcane', 'Arcane Circuit', [
+    'ar001', 'ar002', 'ar003', 'ar004', 'ar005',
+    'ar006', 'ar007', 'ar008', 'ar009', 'ar010'
+  ]),
+  createDeck('deck-nightmare', 'Nightmare Veil', [
+    'nm001', 'nm002', 'nm003', 'nm004', 'nm005',
+    'nm006', 'nm007', 'nm008', 'nm009', 'nm010'
+  ])
+];
 
 const normalizeCards = (raw: RawCard[]): CardDef[] =>
   raw.map((card) => ({
@@ -50,9 +80,11 @@ const normalizeCards = (raw: RawCard[]): CardDef[] =>
     image: card.image
   }));
 
-const defaultDecks = (): Deck[] => [
-  { id: `deck-${Date.now()}`, name: 'Deck 1', cards: {} }
-];
+const defaultDecks = (): Deck[] => TEMPLATE_DECKS.map((deck) => ({
+  ...deck,
+  cards: { ...deck.cards },
+  territories: [...deck.territories]
+}));
 
 const loadDecks = (): Deck[] => {
   if (typeof window === 'undefined') return defaultDecks();
@@ -61,7 +93,12 @@ const loadDecks = (): Deck[] => {
     if (!raw) return defaultDecks();
     const parsed = JSON.parse(raw) as Deck[];
     if (!Array.isArray(parsed) || parsed.length === 0) return defaultDecks();
-    return parsed;
+    return parsed.map((deck, index) => ({
+      ...deck,
+      territories: Array.isArray(deck.territories) && deck.territories.length === 3
+        ? deck.territories
+        : ['t001', 't002', 't003']
+    }));
   } catch {
     return defaultDecks();
   }
@@ -76,6 +113,7 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
   const allCards = useMemo(() => normalizeCards(cardData as RawCard[]), []);
   const [decks, setDecks] = useState<Deck[]>(() => loadDecks());
   const [selectedId, setSelectedId] = useState<string>('');
+  const [activeDeckId, setActiveDeckId] = useState<string>('');
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<CardType | 'ALL'>('ALL');
   const [costMin, setCostMin] = useState('');
@@ -84,6 +122,12 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
   useEffect(() => {
     if (!selectedId && decks.length > 0) setSelectedId(decks[0].id);
   }, [decks, selectedId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedActive = window.localStorage.getItem('aether-active-deck-id');
+    if (savedActive) setActiveDeckId(savedActive);
+  }, []);
 
   useEffect(() => {
     saveDecks(decks);
@@ -115,6 +159,7 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
   }, [selectedDeck, allCards]);
 
   const deckCount = deckEntries.reduce((sum, entry) => sum + entry.count, 0);
+  const isDeckFull = deckCount >= MAX_DECK_SIZE;
 
   const typeBreakdown = deckEntries.reduce<Record<CardType, number>>(
     (acc, entry) => {
@@ -130,10 +175,15 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
   };
 
   const addCardToDeck = (cardId: string) => {
-    updateDeck((deck) => ({
-      ...deck,
-      cards: { ...deck.cards, [cardId]: (deck.cards[cardId] ?? 0) + 1 }
-    }));
+    updateDeck((deck) => {
+      const total = Object.values(deck.cards).reduce((sum, count) => sum + count, 0);
+      const current = deck.cards[cardId] ?? 0;
+      if (total >= MAX_DECK_SIZE || current >= MAX_COPIES) return deck;
+      return {
+        ...deck,
+        cards: { ...deck.cards, [cardId]: current + 1 }
+      };
+    });
   };
 
   const removeCardFromDeck = (cardId: string) => {
@@ -152,13 +202,36 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
 
   const addDeck = () => {
     const nextDeck: Deck = {
-      id: `deck-${Date.now()}`,
-      name: `Deck ${decks.length + 1}`,
-      cards: {}
+      id: `deck-custom-${Date.now()}`,
+      name: `Custom Deck ${decks.length + 1}`,
+      cards: {},
+      territories: ['t001', 't002', 't003']
     };
     setDecks((prev) => [...prev, nextDeck]);
     setSelectedId(nextDeck.id);
   };
+
+  const territoryCards = allCards.filter((card) => card.type === 'TERRITORY');
+  const updateTerritory = (index: number, value: string) => {
+    updateDeck((deck) => {
+      const next = [...deck.territories];
+      next[index] = value;
+      return { ...deck, territories: next };
+    });
+  };
+
+  const handleSetActive = (id: string) => {
+    setActiveDeckId(id);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('aether-active-deck-id', id);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeDeckId && selectedDeck) {
+      handleSetActive(selectedDeck.id);
+    }
+  }, [activeDeckId, selectedDeck]);
 
   const deleteDeck = (deckId: string) => {
     setDecks((prev) => {
@@ -166,10 +239,20 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
       if (next.length === 0) {
         const fresh = defaultDecks();
         setSelectedId(fresh[0].id);
+        setActiveDeckId(fresh[0].id);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('aether-active-deck-id', fresh[0].id);
+        }
         return fresh;
       }
       if (!next.find((deck) => deck.id === selectedId)) {
         setSelectedId(next[0].id);
+      }
+      if (deckId === activeDeckId) {
+        setActiveDeckId(next[0].id);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('aether-active-deck-id', next[0].id);
+        }
       }
       return next;
     });
@@ -215,7 +298,14 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span>{deck.name}</span>
+                    <div className="flex flex-col items-start">
+                      <span>{deck.name}</span>
+                      {deck.id === activeDeckId && (
+                        <span className="text-[10px] bg-amber-500/80 text-black px-1.5 rounded font-bold">
+                          ACTIVE
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-white/40">{Object.values(deck.cards).reduce((a, b) => a + b, 0)} cards</span>
                   </div>
                 </button>
@@ -239,6 +329,17 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => selectedDeck && handleSetActive(selectedDeck.id)}
+                    disabled={selectedDeck?.id === activeDeckId}
+                    className={`px-3 py-2 rounded-full border text-xs uppercase tracking-widest transition-colors ${
+                      selectedDeck?.id === activeDeckId
+                        ? 'border-amber-500 bg-amber-500/20 text-amber-200 cursor-default'
+                        : 'border-green-400/40 text-green-200 hover:bg-green-400/10 hover:border-green-300'
+                    }`}
+                  >
+                    {selectedDeck?.id === activeDeckId ? 'Equipped' : 'Equip Deck'}
+                  </button>
                   <button
                     onClick={clearDeck}
                     className="px-3 py-2 rounded-full border border-white/15 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:border-white/40"
@@ -269,7 +370,8 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-white/60 mb-6">
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3">
                   <div className="text-white/40 uppercase tracking-widest text-[10px]">Total</div>
-                  <div className="text-lg text-white">{deckCount}</div>
+                  <div className="text-lg text-white">{deckCount} / {MAX_DECK_SIZE}</div>
+                  <div className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Max 4 copies</div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3">
                   <div className="text-white/40 uppercase tracking-widest text-[10px]">Units</div>
@@ -289,6 +391,11 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
                 <div>
                   <div className="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">Deck List</div>
                   <div className="space-y-2 max-h-[360px] overflow-y-auto pr-2">
+                    {isDeckFull && (
+                      <div className="text-xs text-amber-200 bg-amber-500/10 border border-amber-400/40 rounded-xl px-3 py-2">
+                        Deck is full. Remove cards to add more.
+                      </div>
+                    )}
                     {deckEntries.length === 0 && (
                       <div className="text-sm text-white/40 border border-dashed border-white/10 rounded-xl p-4">
                         No cards yet. Use the library on the right to add cards.
@@ -315,7 +422,12 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
                           <span className="text-sm text-white">{count}</span>
                           <button
                             onClick={() => addCardToDeck(card.id)}
-                            className="w-7 h-7 rounded-full border border-white/15 text-white/70 hover:text-white"
+                            disabled={isDeckFull || count >= MAX_COPIES}
+                            className={`w-7 h-7 rounded-full border text-white/70 transition-colors ${
+                              isDeckFull || count >= MAX_COPIES
+                                ? 'border-white/10 text-white/30 cursor-not-allowed'
+                                : 'border-white/15 hover:text-white'
+                            }`}
                           >
                             +
                           </button>
@@ -327,6 +439,30 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
 
                 <div>
                   <div className="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">Card Library</div>
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-3 mb-4">
+                    <div className="text-[10px] uppercase tracking-[0.4em] text-white/40 mb-2">Territory Order</div>
+                    <div className="flex flex-col gap-2">
+                      {[0, 1, 2].map((slot) => (
+                        <div key={`territory-${slot}`} className="flex items-center gap-2">
+                          <span className="text-xs text-white/50 w-5">#{slot + 1}</span>
+                          <select
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white"
+                            value={selectedDeck?.territories?.[slot] ?? territoryCards[slot]?.id ?? ''}
+                            onChange={(event) => updateTerritory(slot, event.target.value)}
+                          >
+                            {territoryCards.map((card) => (
+                              <option key={card.id} value={card.id}>
+                                {card.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-white/40 mt-2">
+                      Territory cards flip in order on your turns up to turn 6.
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-2 mb-3">
                     <input
                       className="flex-1 min-w-[160px] bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white"
@@ -374,7 +510,15 @@ export const DeckEditor: React.FC<DeckEditorProps> = ({ onBack }) => {
                           </div>
                           <button
                             onClick={() => addCardToDeck(card.id)}
-                            className="px-3 py-1 rounded-full border border-amber-300/40 text-xs uppercase tracking-widest text-amber-100 hover:text-white hover:border-amber-200"
+                            disabled={
+                              isDeckFull ||
+                              (selectedDeck?.cards[card.id] ?? 0) >= MAX_COPIES
+                            }
+                            className={`px-3 py-1 rounded-full border text-xs uppercase tracking-widest transition-colors ${
+                              isDeckFull || (selectedDeck?.cards[card.id] ?? 0) >= MAX_COPIES
+                                ? 'border-white/10 text-white/30 cursor-not-allowed'
+                                : 'border-amber-300/40 text-amber-100 hover:text-white hover:border-amber-200'
+                            }`}
                           >
                             Add
                           </button>

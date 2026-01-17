@@ -37,7 +37,15 @@ const MenuButton = ({
 
 export const MainMenu: React.FC<MainMenuProps> = ({ onSelect, onExit }) => {
   return (
-    <div className="min-h-screen w-full aether-bg relative overflow-hidden">
+    <div
+      className="min-h-screen w-full relative overflow-hidden"
+      style={{
+        backgroundImage: "url('/images/backgrounds/mainbackground.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" />
       <div className="aether-grid" />
       <div className="aether-orb orb-left" />
       <div className="aether-orb orb-right" />

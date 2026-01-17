@@ -13,7 +13,15 @@ export type EffectAction =
   | 'BUFF_ATK'
   | 'ACTIVATE'
   | 'SEARCH_DECK'
-  | 'BOUNCE_UNIT';
+  | 'BOUNCE_UNIT'
+  | 'SILENCE_UNIT'
+  | 'MOVE_UNIT_TO_ENERGY'
+  | 'RETURN_GRAVE_UNITS'
+  | 'MILL'
+  | 'CONDITIONAL_DESTROY'
+  | 'SUMMON_FROM_ENERGY'
+  | 'SUMMON_FROM_DECK'
+  | 'NEGATE_EFFECT';
 
 export type EffectTrigger = 'ENTER' | 'ACTIVATE';
 
@@ -22,6 +30,8 @@ export interface EffectFilter {
   id?: string;
   nameIncludes?: string;
   keyword?: string;
+  cost?: number;
+  maxCost?: number;
 }
 
 export type EffectTarget =
@@ -40,6 +50,9 @@ export interface EffectDef {
   trigger?: EffectTrigger;
   filter?: EffectFilter;
   shuffle?: boolean;
+  condition?: string;
+  threshold?: number;
+  grantRush?: boolean;
 }
 
 export interface CardDef {
@@ -61,6 +74,7 @@ export interface CardInstance extends CardDef {
   isTapped: boolean;
   isFaceDown: boolean;
   canAttack: boolean;
+  silencedTurn?: number;
 }
 
 export interface PlayerState {
@@ -111,12 +125,13 @@ export interface PendingAttack {
 
 export interface GameState {
   players: Record<PlayerID, PlayerState>;
-  sharedDeck: CardInstance[];
-  sharedRevealed: CardInstance[];
+  territoryDecks: Record<PlayerID, CardInstance[]>;
+  activeTerritory: CardInstance | null;
   turnCount: number;
   era: number;
   combatState: CombatState | null;
   pendingEffect: PendingEffect | null;
+  lastPendingEffect: PendingEffect | null;
   pendingAttack: PendingAttack | null;
 }
 
