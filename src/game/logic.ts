@@ -12,8 +12,13 @@ type RawEffect = {
     id?: string;
     nameIncludes?: string;
     keyword?: string;
+    cost?: number;
+    maxCost?: number;
   };
   shuffle?: boolean;
+  condition?: string;
+  threshold?: number;
+  grantRush?: boolean;
 };
 
 type RawCard = {
@@ -48,7 +53,10 @@ const toEffectDef = (raw: RawEffect): EffectDef => {
         target: raw.target as EffectDef['target'],
         trigger: raw.trigger as EffectDef['trigger'],
         filter: raw.filter as EffectDef['filter'],
-        shuffle: raw.shuffle
+        shuffle: raw.shuffle,
+        condition: raw.condition,
+        threshold: raw.threshold,
+        grantRush: raw.grantRush
       };
   }
 };
@@ -110,6 +118,12 @@ export const resolveEffect = (
 
   switch (effect.action) {
     case 'DRAW': {
+      if (effect.filter?.keyword) {
+        const hasKeyword = player.battleZone.some(
+          (unit) => unit && (unit.keywords ?? []).includes(effect.filter?.keyword ?? '')
+        );
+        if (!hasKeyword) break;
+      }
       for (let i = 0; i < amount; i += 1) {
         const card = player.deck.pop();
         if (card) {
@@ -150,6 +164,49 @@ export const resolveEffect = (
         if (targetUnit) {
           targetSide.battleZone[targetSlot] = null;
           targetSide.graveyard.push(targetUnit);
+        }
+      }
+      break;
+    }
+    case 'SILENCE_UNIT': {
+      if (typeof targetSlot === 'number') {
+        const targetOwner =
+          targetPlayerID ??
+          (effect.target === 'ALLY_UNIT' ? playerID : effect.target === 'ENEMY_UNIT' ? opponentID : opponentID);
+        const targetSide = G.players[targetOwner];
+        const targetUnit = targetSide.battleZone[targetSlot];
+        if (targetUnit) {
+          targetUnit.silencedTurn = ctx.turn;
+        }
+      }
+      break;
+    }
+    case 'MOVE_UNIT_TO_ENERGY': {
+      if (typeof targetSlot === 'number') {
+        const targetOwner =
+          targetPlayerID ??
+          (effect.target === 'ALLY_UNIT' ? playerID : effect.target === 'ENEMY_UNIT' ? opponentID : opponentID);
+        const targetSide = G.players[targetOwner];
+        const targetUnit = targetSide.battleZone[targetSlot];
+        if (targetUnit) {
+          if (targetSide.energyZone.length < 5) {
+            targetSide.battleZone[targetSlot] = null;
+            targetUnit.isTapped = false;
+            targetUnit.canAttack = false;
+            targetSide.energyZone.push(targetUnit);
+          } else {
+            targetSide.battleZone[targetSlot] = null;
+            targetSide.graveyard.push(targetUnit);
+            if (amount > 0) {
+              for (let i = 0; i < amount; i += 1) {
+                const card = player.deck.pop();
+                if (card) {
+                  card.isFaceDown = false;
+                  player.hand.push(card);
+                }
+              }
+            }
+          }
         }
       }
       break;
@@ -197,6 +254,89 @@ export const resolveEffect = (
       }
       break;
     }
+    case 'MILL': {
+      for (let i = 0; i < amount; i += 1) {
+        const card = player.deck.pop();
+        if (card) {
+          card.isFaceDown = false;
+          player.graveyard.push(card);
+        }
+      }
+      break;
+    }
+    case 'RETURN_GRAVE_UNITS': {
+      let remaining = amount;
+      for (let i = player.graveyard.length - 1; i >= 0 && remaining > 0; i -= 1) {
+        const card = player.graveyard[i];
+        if (card.type !== 'UNIT') continue;
+        player.graveyard.splice(i, 1);
+        player.hand.push(card);
+        remaining -= 1;
+      }
+      break;
+    }
+    case 'CONDITIONAL_DESTROY': {
+      const threshold = effect.threshold ?? 0;
+      const oppHasLarge = opponent.graveyard.some((card) => card.type === 'UNIT' && card.cost >= threshold);
+      if (!oppHasLarge && typeof targetSlot === 'number') {
+        const targetOwner =
+          targetPlayerID ??
+          (effect.target === 'ALLY_UNIT' ? playerID : effect.target === 'ENEMY_UNIT' ? opponentID : opponentID);
+        const targetSide = G.players[targetOwner];
+        const targetUnit = targetSide.battleZone[targetSlot];
+        if (targetUnit) {
+          targetSide.battleZone[targetSlot] = null;
+          targetSide.graveyard.push(targetUnit);
+        }
+      }
+      break;
+    }
+    case 'SUMMON_FROM_ENERGY': {
+      const slotIdx = player.battleZone.findIndex((s) => s === null);
+      if (slotIdx === -1) break;
+      const energyIdx =
+        typeof targetSlot === 'number'
+          ? targetSlot
+          : player.energyZone.findIndex((card) => card.type === 'UNIT');
+      if (energyIdx < 0 || energyIdx >= player.energyZone.length) break;
+      const unit = player.energyZone.splice(energyIdx, 1)[0];
+      const buff = amount ?? 0;
+      unit.currentBP = (unit.currentBP ?? unit.bp ?? 0) + buff;
+      if (effect.grantRush) {
+        unit.canAttack = true;
+        if (!unit.keywords) unit.keywords = [];
+        if (!unit.keywords.includes('RUSH')) unit.keywords.push('RUSH');
+      }
+      unit.isTapped = false;
+      player.battleZone[slotIdx] = unit;
+      break;
+    }
+    case 'SUMMON_FROM_DECK': {
+      const slotIdx = player.battleZone.findIndex((s) => s === null);
+      if (slotIdx === -1) break;
+      const filter = effect.filter;
+      if (!filter) break;
+      const index = player.deck.findIndex((card) => {
+        if (filter.type && card.type !== filter.type) return false;
+        if (filter.keyword && !(card.keywords ?? []).includes(filter.keyword)) return false;
+        if (typeof filter.cost === 'number' && card.cost !== filter.cost) return false;
+        if (typeof filter.maxCost === 'number' && card.cost > filter.maxCost) return false;
+        return true;
+      });
+      if (index >= 0) {
+        const [unit] = player.deck.splice(index, 1);
+        if (unit) {
+          unit.isFaceDown = false;
+          unit.isTapped = false;
+          unit.canAttack = (unit.keywords ?? []).includes('RUSH');
+          player.battleZone[slotIdx] = unit;
+        }
+      }
+      if (effect.shuffle) {
+        player.deck = shuffle(player.deck);
+      }
+      break;
+    }
     case 'SEARCH_DECK': {
       const filter = effect.filter;
       if (!filter) break;
@@ -205,6 +345,8 @@ export const resolveEffect = (
         if (filter.type && card.type !== filter.type) return false;
         if (filter.keyword && !(card.keywords ?? []).includes(filter.keyword)) return false;
         if (filter.nameIncludes && !card.name.toLowerCase().includes(filter.nameIncludes.toLowerCase())) return false;
+        if (typeof filter.cost === 'number' && card.cost !== filter.cost) return false;
+        if (typeof filter.maxCost === 'number' && card.cost > filter.maxCost) return false;
         return true;
       });
       if (index >= 0) {

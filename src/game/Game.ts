@@ -106,6 +106,7 @@ export const MyCardGame: Game<GameState> = {
       era: 1,
       combatState: null,
       pendingEffect: null,
+      lastPendingEffect: null,
       pendingAttack: null
     };
   },
@@ -219,16 +220,17 @@ export const MyCardGame: Game<GameState> = {
         moves: {}
       }
     },
-    onEnd: ({ G, ctx }) => {
-      const player = G.players[ctx.currentPlayer];
-      player.battleZone.forEach((c) => {
-        if (c) {
+    onEnd: ({ G }) => {
+      Object.values(G.players).forEach((player) => {
+        player.battleZone.forEach((c) => {
+          if (c) {
+            c.isTapped = false;
+            c.canAttack = true;
+          }
+        });
+        player.energyZone.forEach((c) => {
           c.isTapped = false;
-          c.canAttack = true;
-        }
-      });
-      player.energyZone.forEach((c) => {
-        c.isTapped = false;
+        });
       });
     }
   },

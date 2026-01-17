@@ -12,6 +12,7 @@ interface PlayerAreaProps {
   onFieldClick: (index: number) => void;
   isBlockingPhase?: boolean;
   isDeploymentPhase?: boolean;
+  isEnergyTargeting?: boolean;
   onEnergyClick?: (index: number) => void;
   targetingSource?: unknown;
 }
@@ -24,6 +25,7 @@ export const PlayerArea: React.FC<PlayerAreaProps> = ({
   onFieldClick,
   isBlockingPhase,
   isDeploymentPhase,
+  isEnergyTargeting,
   onEnergyClick
 }) => {
   return (
@@ -59,14 +61,16 @@ export const PlayerArea: React.FC<PlayerAreaProps> = ({
               key={card.instanceId ?? idx}
               className={clsx(
                 'relative transition-all duration-200',
-                !isOpponent && isDeploymentPhase && 'cursor-pointer hover:-translate-y-2 hover:ring-2 hover:ring-amber-300'
+                !isOpponent &&
+                  (isDeploymentPhase || isEnergyTargeting) &&
+                  'cursor-pointer hover:-translate-y-2 hover:ring-2 hover:ring-amber-300'
               )}
               onClick={() => {
-                if (!isOpponent && isDeploymentPhase) onEnergyClick?.(idx);
+                if (!isOpponent && (isDeploymentPhase || isEnergyTargeting)) onEnergyClick?.(idx);
               }}
             >
               <Card card={card} variant="ENERGY" />
-              {!isOpponent && isDeploymentPhase && (
+              {!isOpponent && (isDeploymentPhase || isEnergyTargeting) && (
                 <div className="absolute -top-2 -right-2 bg-amber-500 text-black rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">
                   R
                 </div>

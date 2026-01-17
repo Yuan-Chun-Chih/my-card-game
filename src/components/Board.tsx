@@ -9,6 +9,8 @@ import { PlayerArea } from './PlayerArea';
 type TargetingSource =
   | { type: 'HAND_SPELL'; index: number; card: CardInstance }
   | { type: 'UNIT_EFFECT'; slot: number; card: CardInstance }
+  | { type: 'UNIT_EFFECT_ENERGY'; slot: number; card: CardInstance }
+  | { type: 'FLASH_SUMMON'; index: number; card: CardInstance }
   | null;
 
 interface MyBoardProps extends BoardProps<GameState> {}
@@ -41,6 +43,15 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
 
   const handleFieldClick = (isOpponent: boolean, slotIndex: number) => {
     if (targetingSource) {
+      if (targetingSource.type === 'FLASH_SUMMON') {
+        if (isOpponent) return;
+        moves.playUnitInstantWithSacrifice(targetingSource.index, slotIndex);
+        setTargetingSource(null);
+        return;
+      }
+      if (targetingSource.type === 'UNIT_EFFECT_ENERGY') {
+        return;
+      }
       const targetPlayerID = isOpponent ? opID : viewID;
       if (targetingSource.type === 'HAND_SPELL') {
         if (targetingSource.card.type === 'SPELL') {
@@ -93,7 +104,9 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
       {targetingSource && (
         <div className="absolute inset-0 z-40 cursor-crosshair flex flex-col items-center justify-center pointer-events-none">
           <div className="bg-black/70 px-6 py-4 rounded-xl border border-yellow-500 animate-pulse pointer-events-auto">
-            <h2 className="text-xl font-bold text-yellow-500 mb-1">Select a target</h2>
+            <h2 className="text-xl font-bold text-yellow-500 mb-1">
+              {targetingSource.type === 'UNIT_EFFECT_ENERGY' ? 'Select an energy unit' : 'Select a target'}
+            </h2>
             <button onClick={() => setTargetingSource(null)} className="px-4 py-1 bg-gray-700 rounded text-xs text-white">
               Cancel
             </button>
@@ -144,6 +157,13 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
             me.energyZone.length >= selectedCard.cost &&
             me.battleZone.some((s) => s === null)
           }
+          canFlash={
+            !isMyTurn &&
+            selectedCard.type === 'UNIT' &&
+            (selectedCard.keywords ?? []).includes('FLASH') &&
+            me.energyZone.length >= selectedCard.cost &&
+            me.battleZone.some((s) => s !== null)
+          }
           canCastSpell={isMainPhase && selectedCard.type === 'SPELL' && me.energyZone.length >= selectedCard.cost}
           canCastInstant={
             (isMainPhase || isBlockingPhase || isResponsePhase) &&
@@ -157,6 +177,9 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
           onPlayUnit={() => {
             moves.playUnit(selectedHandIndex);
             setSelectedHandIndex(null);
+          }}
+          onPlayFlash={() => {
+            startTargeting({ type: 'FLASH_SUMMON', index: selectedHandIndex, card: selectedCard });
           }}
           onPlaySpell={() => {
             moves.playSpell(selectedHandIndex);
@@ -180,7 +203,13 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
             setSelectedFieldSlot(null);
           }}
           onEffect={() => {
-            startTargeting({ type: 'UNIT_EFFECT', slot: selectedFieldSlot, card: me.battleZone[selectedFieldSlot]! });
+            const unit = me.battleZone[selectedFieldSlot]!;
+            const hasEnergySummon = unit.effects?.some((eff) => eff.action === 'SUMMON_FROM_ENERGY');
+            startTargeting({
+              type: hasEnergySummon ? 'UNIT_EFFECT_ENERGY' : 'UNIT_EFFECT',
+              slot: selectedFieldSlot,
+              card: unit
+            });
           }}
           onCancel={() => setSelectedFieldSlot(null)}
         />
@@ -237,7 +266,15 @@ export const CardGameBoard: React.FC<MyBoardProps> = ({ G, ctx, moves, playerID 
         onFieldClick={(idx: number) => handleFieldClick(false, idx)}
         isBlockingPhase={isBlockingPhase}
         isDeploymentPhase={isDeploymentPhase}
-        onEnergyClick={(idx: number) => moves.returnEnergy(idx)}
+        isEnergyTargeting={targetingSource?.type === 'UNIT_EFFECT_ENERGY'}
+        onEnergyClick={(idx: number) => {
+          if (targetingSource?.type === 'UNIT_EFFECT_ENERGY') {
+            moves.useUnitEffect(targetingSource.slot, idx, viewID);
+            setTargetingSource(null);
+            return;
+          }
+          moves.returnEnergy(idx);
+        }}
         targetingSource={targetingSource}
       />
     </div>
